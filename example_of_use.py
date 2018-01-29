@@ -5,11 +5,16 @@ from time import sleep, clock
 import os
 import signal
 
-stop = False
-sem = Semaphore(1)
-semstop = Semaphore(1)
+stop = False  # To stop threads
+sem = Semaphore(1)  # Semaphore for sync access to Logger
+semstop = Semaphore(1)  # Semaphore for sync access to stop
+
 
 def show_log():
+	"""
+	Function showing log in console (last 10 records in log)
+	:return: None
+	"""
 	if os.name == 'nt':
 		os.system('cls')
 	elif os.name == 'posix':
@@ -20,7 +25,13 @@ def show_log():
 	print('\n'.join(loglist))
 
 
-def stoppper(signum, frame):
+def stopper(signum, frame):
+	"""
+	Handler for keyboard interruption to stop threads
+	:param signum:
+	:param frame:
+	:return:
+	"""
 	global stop
 	semstop.acquire()
 	stop = True
@@ -28,27 +39,31 @@ def stoppper(signum, frame):
 
 
 def error_maker():
+	"""
+	Function which making error events
+	:return:
+	"""
 	global stop
 	log = Logger('log.txt')
-	x = [i for i in range(10)]
+	x = [i for i in range(10)]  # list with maximum index 9!
 	semstop.acquire()
 	while not stop:
 		semstop.release()
 		sleep(0.5)
 		try:
-			error_type = randint(0, 2)
+			error_type = randint(0, 2)  # choice of error
 			if error_type == 0:
-				x[randint(0, 10)] = randint(0, 10)
+				x[randint(0, 10)] = randint(0, 10)  # index out of range if 10
 
 			elif error_type ==1:
 				if randint(0, 10) == 0:
-					"123"/3
+					"123"/3  # unsupported operation for this types
 
 			elif error_type==2:
 				if randint(0, 10) == 0:
-					print(unknown_var)
+					print(unknown_var)  # unknown var
 
-		except IndexError as err:
+		except IndexError as err:  # three exceptions for make records in lof
 			sem.acquire()
 			log.event(error, err)
 			sem.release()
@@ -66,7 +81,12 @@ def error_maker():
 		semstop.acquire()
 	semstop.release()
 
+
 def normal_maker():
+	"""
+	Function which making normal events
+	:return:
+	"""
 	global stop
 	log = Logger("log.txt")
 	semstop.acquire()
@@ -81,7 +101,12 @@ def normal_maker():
 		semstop.acquire()
 	semstop.release()
 
+
 def remark_maker():
+	"""
+	Function which making remark events
+	:return:
+	"""
 	global stop
 	log = Logger("log.txt")
 	semstop.acquire()
@@ -96,8 +121,9 @@ def remark_maker():
 		semstop.acquire()
 	semstop.release()
 
+
 if __name__ == "__main__":
-	signal.signal(signal.SIGINT, stoppper)
+	signal.signal(signal.SIGINT, stopper)  # Set handler for keyboard interrupt
 
 	err_thread = Thread(target=error_maker)
 	norm_thread = Thread(target=normal_maker)
@@ -109,7 +135,7 @@ if __name__ == "__main__":
 	show_log()
 	last_log_show = clock()
 	semstop.acquire()
-	while not stop:
+	while not stop:  # Refresh screen with last logs, until stop == True
 		semstop.release()
 		sleep(0.1)
 		if clock() - last_log_show > 1:
@@ -121,6 +147,6 @@ if __name__ == "__main__":
 	err_thread.join()
 	norm_thread.join()
 	rem_thread.join()
-	Logger().event(3, "Ho-ho-ho")
+	Logger().event(3, "Ho-ho-ho")  # Make last unknown event
 
-	show_log()
+	show_log()  # show last log
